@@ -11,7 +11,8 @@ const userschema = new mongoose.Schema({
     },
     email: {
         type : String,
-        required: true
+        required: true,
+        lowercase: true
     }
 })
 module.exports = mongoose.model("User", userschema)
