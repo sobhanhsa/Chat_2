@@ -1,23 +1,20 @@
 const mongoose = require('mongoose')
 
-const usermodel = require('./user_schema')
-
+const usermodel = require('../user_schema')
+let emailValidator = require('./validator')
 mongoose.connect('mongodb://localhost/loginapp', () => {
     console.log("db connected")
-})
-
+}
+)
 let users = []
 
-userFinder() 
-
+userFinder()
 async function userFinder() {
     users = await usermodel.find()
-    console.log(users)
 }
 async function passChanger(n, npass) {
     tuserid = users[n]._id
-    users = await usermodel.find({_id : tuserid}).update({pass: npass})
-    console.log(users) 
+    users = await usermodel.find({ _id: tuserid }).update({ pass: npass })
 }
 async function increate(tuser) {
     try {
@@ -27,29 +24,7 @@ async function increate(tuser) {
     }
 }
 //email validate
-let emailRegex = /^[-!#$%&'*+\/0-9=?A-Z^_a-z{|}~](\.?[-!#$%&'*+\/0-9=?A-Z^_a-z`{|}~])*@[a-zA-Z0-9](-*\.?[a-zA-Z0-9])*\.[a-zA-Z](-?[a-zA-Z0-9])+$/;
-let isEmailValid = (email) => {
-    if (!email)
-        return 1;
-
-    if (email.length > 254)
-        return false;
-
-    let valid = emailRegex.test(email);
-    if (!valid)
-        return false;
-
-
-    let parts = email.split("@");
-    if (parts[0].length > 64)
-        return false;
-
-    let domainParts = parts[1].split(".");
-    if (domainParts.some(function (part) { return part.length > 63; }))
-        return false;
-
-    return true;
-}
+//login  fuction
 const apLogin = (req, res) => {
     const muser = req.body
     if (!muser.email) {
@@ -67,32 +42,34 @@ const apLogin = (req, res) => {
             return res.send(`incorrect pass for ${users[i].name} user`)
         }
     }
-    res.send("the considered email not found")
+    res.status(200).send("the considered email not found")
 }
+//sing up function 
 const apSign = (req, res) => {
     const muser = req.body
-    let truthemail = ""
     if (!muser.name) {
         return res.send("please enter the name")
     }
     if (!muser.pass) {
         return res.send("please enter the pass")
     }
-    isEmailValid = isEmailValid(muser.email)
-    if (isEmailValid === 1) {
-        res.send("please enter the email")
-    } else if (isEmailValid === false) {
-        res.sedn("incorrect email")
+    const eValidate = emailValidator(muser.email)
+    if (eValidate === 1) {
+        return res.send("please enter the email")
+    } else if (eValidate === false) {
+        return res.send("incorrect email")
     }
     const repetitive = users.find(element => element.name === muser.name)
-    if (!repetitive) {
+    const repetitiveEmail = users.find(element => element.email === muser.email)
+    if (!repetitive && !repetitiveEmail) {
         increate(muser)
-        return res.send(` user succesfully created with name : ${muser.name},
+        return res.status(201).send(` user succesfully created with name : ${muser.name},
             , pass: ${muser.pass}`)
     } else {
-        return res.send("repetitive name")
+        return res.send("repetitive name or email")
     }
 }
+// pass change fucntion
 const apChange = (req, res) => {
     const muser = req.body
     if (!muser.email) {
@@ -101,7 +78,7 @@ const apChange = (req, res) => {
     if (!muser.pass) {
         return res.send("please enter the pass")
     }
-    if (!muser.newpass){
+    if (!muser.newpass) {
         return res.send("please enter the new pass")
     }
     for (let i = 0; i < users.length; i++) {

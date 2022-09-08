@@ -1,6 +1,6 @@
 const express = require('express')
 const app = new express
-const {apLogin, apSign, apChange} = require('./controller.js')
+const {apLogin, apSign, apChange} = require('./controllers/controller')
 app.use(express.json())
 app.post('/',apLogin) 
 app.post('/sign',apSign) 
