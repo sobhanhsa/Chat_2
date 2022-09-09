@@ -1,8 +1,10 @@
 const express = require('express')
+const {authenticateToken} = require('./controllers/jwt/jwt')
 const app = new express
-const {apLogin, apSign, apChange} = require('./controllers/controller')
+const {apLogin, apSign, apChange, apProfile} = require('./controllers/controller')
 app.use(express.json())
-app.post('/',apLogin) 
+app.post('/login',apLogin) 
 app.post('/sign',apSign) 
-app.post('/changepass',apChange) 
+app.post('/changepass',apChange)
+app.get('/', authenticateToken ,apProfile) 
 app.listen(8080, () => console.log("server is listennig on 8080 port"))

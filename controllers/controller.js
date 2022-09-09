@@ -1,16 +1,17 @@
 const mongoose = require('mongoose')
-
 const usermodel = require('../user_schema')
+let {accessToken} = require('./jwt/jwt')
 let emailValidator = require('./validator')
+let users = []
 mongoose.connect('mongodb://localhost/loginapp', () => {
     console.log("db connected")
 }
 )
-let users = []
 
 userFinder()
 async function userFinder() {
     users = await usermodel.find()
+    console.log(users)
 }
 async function passChanger(n, npass) {
     tuserid = users[n]._id
@@ -23,7 +24,6 @@ async function increate(tuser) {
         console.log(e.message)
     }
 }
-//email validate
 //login  fuction
 const apLogin = (req, res) => {
     const muser = req.body
@@ -36,8 +36,9 @@ const apLogin = (req, res) => {
     for (let i = 0; i < users.length; i++) {
         if (users[i].email === muser.email) {
             if (users[i].pass === muser.pass) {
-                return res.send(`welcome ${users[i].name} with pass = ${users[i].pass}, 
-                with email : ${uesr[i].email}`)
+                let usert = { email : req.body.email }
+                let iac = accessToken(usert)
+                return res.json({email : muser.email, token : iac})
             }
             return res.send(`incorrect pass for ${users[i].name} user`)
         }
@@ -93,8 +94,16 @@ const apChange = (req, res) => {
     }
     res.send("the considered email not found")
 }
+//main page that recieve the token ...
+const apProfile = (req, res,) => {
+    userFinder()
+    console.log(req.user)
+    const fuser = users.filter(user => user.email === req.user.email)
+    res.send(`wellcome back ${fuser[0].name}`)
+}
 module.exports = {
     apLogin,
     apSign,
-    apChange
+    apChange,
+    apProfile
 }  
