@@ -14,15 +14,19 @@ activeuserFinder()
 async function activeuserFinder() {
     activeusers = await acitveusermodel.find()
 }
-async function activeuserAdd(room, username) {
-    activeusers = await acitveusermodel.create({ name: username, room: room })
+async function activeuserAdd(room, username, socketid) {
+    const dupuser = await acitveusermodel.find({ socketid: socketid })
+    if (!dupuser[0]) {
+        activeusers = await acitveusermodel.create({ name: username, room: room, socketid: socketid })
+    }
     activeusers = await acitveusermodel.find({ room: room })
     return activeusers
 }
-async function activeuserDc(room, username) {
-    activeusers = await acitveusermodel.deleteOne({ name: username, room: room })
-    activeusers = await acitveusermodel.find({ room: room })
-    return activeusers
+async function activeuserDc(socketid) {
+    const userroom = await acitveusermodel.find({ socketid: socketid })
+    activeusers = await acitveusermodel.deleteMany({ socketid: socketid })
+    activeusers = await acitveusermodel.find({ room: userroom.room })
+    return [userroom, activeusers]
 }
 
 const mainioController = (io) => {
@@ -70,7 +74,7 @@ const mainioController = (io) => {
             socket.join(room)
             function asyncrunner() {
                 async function async() {
-                    io.to(room).emit('roomusers', await activeuserAdd(room, username))
+                    io.to(room).emit('roomusers', await activeuserAdd(room, username, socket.id))
                 }
                 async()
             }
@@ -85,18 +89,23 @@ const mainioController = (io) => {
             socket.on('chatmessage', (obj) => {
                 io.to(room).emit('chatmessage', { name: obj.name, msg: obj.msg })
             })
-            socket.on('disconnect', () => {
-                function asyncrunnerDc() {
-                    async function async() {
-                        io.to(room).emit('roomusers', await activeuserDc(room, username))
-                    }
-                    async()
-                }
-                asyncrunnerDc()
-                io.to(room).emit('chatmessage',
-                    { name: "chatbot", msg: `${username} disconnected` })
-            })
         })
+        socket.on('disconnect', () => {
+            function asyncrunnerDc() {
+                async function asyncDc() {
+                    const dcuserandroom = await activeuserDc(socket.id)
+
+                    if (dcuserandroom[1][1]) {
+                        io.to(dcuserandroom[0][0].room).emit('roomusers', dcuserandroom[1])
+                        io.to(dcuserandroom[0][0].room).emit('chatmessage',
+                            { name: "chatbot", msg: `${dcuserandroom[0].name} disconnected` })
+                    }
+                }
+                asyncDc()
+            }
+            asyncrunnerDc()
+        })
+
     })
 }
-module.exports = { mainioController }  
+module.exports = { mainioController }
